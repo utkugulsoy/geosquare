@@ -1,0 +1,320 @@
+/* The app's palette, lifted from Theme.swift so the page and the app read as
+   one product: navy ground, navy panels with a blue rim, marker yellow for
+   anything you act on, cream paper for a placed country. */
+:root {
+  --bg: #0E2750;            /* AppColor.background */
+  --bg-deep: #081A3A;       /* AppColor.backgroundDeep */
+  --card: #13396B;          /* AppColor.card */
+  --stroke: #3A7BE0;        /* AppColor.cardStroke */
+  --label: #AFC3EA;         /* AppColor.label */
+  --warm: #FFC93C;          /* AppColor.warm */
+  --warm-deep: #FFA61B;     /* AppColor.warmDeep */
+  --cream: #F6EFDD;         /* AppColor.cream */
+  --cream-stroke: #D8C9A3;  /* AppColor.creamStroke */
+  --ink: #1B2A4A;           /* AppColor.ink */
+  --danger: #FF5A5F;        /* AppColor.danger */
+}
+* { box-sizing: border-box; }
+/* An author `display` beats the UA stylesheet's rule for [hidden], so
+   .panel's `display: flex` was showing the search over the board on
+   load. Anything hidden stays hidden. */
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+  color: #fff;
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+/* The planet occupies the bottom 22% of the viewport, so the column has to
+   clear it or the footer ends up unreadable on top of the continents. */
+main { max-width: 560px; margin: 0 auto; padding: 24px 16px calc(22vh + 56px);
+       position: relative; z-index: 1; }
+
+/* Backdrop, mirroring ThemeBackground's layering: sky and stars behind
+   everything, clouds drifting in the upper third, the planet along the
+   bottom edge. All fixed, so the board scrolls over the scene. */
+.sky { position: fixed; inset: 0; width: 100%; z-index: 0; pointer-events: none; }
+.globe { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; z-index: 0; pointer-events: none; }
+/* Clouds live in the margin beside the column. Below that width the column
+   is the whole page and they end up showing through the board's translucent
+   cells, so they are dropped rather than placed on top of the puzzle. */
+.cloud { display: none; position: fixed; z-index: 0; pointer-events: none;
+         opacity: .55; width: 92px; }
+.cloud.big { left: 4%; top: 22%; }
+.cloud.small { right: 3%; top: 38%; opacity: .45; width: 64px; }
+@media (min-width: 860px) { .cloud { display: block; } }
+
+header { text-align: center; }
+/* The app's wordmark, not a text imitation of it. */
+.wordmark { height: 46px; width: auto; display: block; margin: 0 auto 2px; }
+.sub { margin: 2px 0 14px; color: var(--warm); font-size: 12px;
+       letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; }
+.pills { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--card); border: 2px solid var(--stroke);
+  border-radius: 999px; padding: 7px 14px; font-weight: 800; font-size: 15px;
+}
+.pill i { width: 1px; height: 14px; background: var(--stroke); }
+
+/* The compass sits beside the hearts, where the app keeps it, and glows while
+   armed so it is obvious the next tap spends it rather than opening search. */
+.pill.compass { cursor: pointer; padding: 5px 11px; line-height: 0;
+                transition: transform .2s, box-shadow .2s, border-color .2s; }
+.pill.compass img { width: 26px; height: 26px; display: block; }
+.pill.compass:hover:not(:disabled) { border-color: var(--warm); }
+.pill.compass.armed {
+  border-color: var(--warm); box-shadow: 0 0 10px rgba(255,196,61,.55);
+  transform: scale(1.06);
+}
+/* Spent: greyed and faded rather than hidden, so it still reads as something
+   you had — the same treatment CompassPill gives it in the app. */
+.pill.compass.spent, .pill.compass:disabled { cursor: default; }
+.pill.compass.spent img { filter: grayscale(1); opacity: .45; }
+
+/* Armed, every empty square turns into a compass face and lights its rim —
+   the board itself says what the next tap will do. */
+.cell.empty.armed {
+  /* The app keeps the card's own fill and only lights the rim, so the
+     square still reads as a square rather than as a warm blob. */
+  border-style: solid; border-color: var(--warm); border-width: 3px;
+  box-shadow: 0 3px 10px rgba(255,201,60,.35);
+}
+/* Four seconds a turn, linear, forever — SpinningCompass's own timing. */
+.cell.empty.armed .needle { width: 34px; height: 34px; display: block;
+                            animation: turn 4s linear infinite;
+                            filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+@keyframes turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cell.empty.armed .needle { animation: none; } }
+
+/* A compass square is badged, never "+0". */
+.cell .pts.compass { background: #2F6FD1; padding: 3px; line-height: 0; }
+.cell .pts.compass .cglyph { width: 13px; height: 13px; display: block; }
+.warm { color: var(--warm); }
+
+/* One column for the row labels, then the three board columns. */
+.cols, .grid { display: grid; grid-template-columns: 76px repeat(3, 1fr); gap: 7px; }
+.cols { margin-bottom: 6px; }
+.head {
+  color: var(--label); font-size: 11px; line-height: 1.25; font-style: italic;
+  display: flex; align-items: flex-end; justify-content: center; text-align: center;
+}
+.head.row { justify-content: flex-end; text-align: right; align-items: center; padding-right: 2px; }
+
+.cell {
+  aspect-ratio: 1; border-radius: 14px; position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; font: inherit;
+}
+/* CellView's mystery card: the app's own 16407A→0F2F5E gradient, a solid
+   blue rim and an inset dashed stitch. Held just short of opaque and blurred
+   behind, so the sky still shows through without the square dissolving into
+   it — a fully transparent first pass lost the board entirely. */
+.cell.empty {
+  background: linear-gradient(135deg, rgba(22,64,122,.78), rgba(15,47,94,.78));
+  -webkit-backdrop-filter: blur(7px) saturate(115%);
+  backdrop-filter: blur(7px) saturate(115%);
+  border: 2px solid rgba(58,123,224,.9);
+  box-shadow: 0 3px 4px rgba(0,0,0,.3);
+  color: rgba(255,255,255,.45); font-size: 26px; font-weight: 900; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.cell.empty::after {          /* the dashed stitch line, inset 5px as in CellView */
+  content: ""; position: absolute; inset: 5px; border-radius: 9px;
+  border: 1.5px dashed rgba(58,123,224,.55); pointer-events: none;
+}
+.cell.empty:hover { border-color: var(--warm); color: rgba(255,255,255,.9); }
+.cell.empty.dead { opacity: .45; cursor: default; }
+.cell.filled { background: var(--cream); border: 2px solid var(--cream-stroke); color: var(--ink); }
+.cell .fl { width: 42px; height: 28px; object-fit: cover; border-radius: 4px;
+             border: 1px solid rgba(21,39,90,.35); box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.cell .nm { font-size: 11px; font-weight: 800; text-align: center; padding: 0 4px; }
+.cell .pts {
+  position: absolute; top: -7px; right: -5px; border-radius: 999px;
+  background: var(--tier, var(--warm)); color: var(--tier-ink, #fff);
+  padding: 1px 7px; font-size: 11px; font-weight: 900;
+}
+
+.result { margin-top: 26px; text-align: center; }
+.result h2 { margin: 0 0 4px; font-size: 22px; }
+#final { margin: 0 0 10px; color: var(--label); }
+#emoji { font-size: 26px; line-height: 1.15; margin: 0 0 14px; font-family: inherit; }
+.cta {
+  background: var(--warm); color: var(--ink); border: 2px solid var(--warm-deep);
+  border-radius: 14px; padding: 12px 26px; font: inherit; font-weight: 900;
+  font-size: 16px; cursor: pointer;
+}
+/* The app pitch: a panel like the rest of the page's panels, not a banner
+   stuck on top of it. The page promises no ads, and this has to read as
+   part of the product rather than as one. */
+.appcta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px;
+  margin: 26px auto 4px; padding: 14px 16px; max-width: 520px;
+  background: var(--card); border: 2px solid var(--stroke); border-radius: 18px;
+}
+.appicon { flex: none; width: 58px; height: 58px; border-radius: 13px;
+           box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.appwords { flex: 1 1 180px; min-width: 0; text-align: left; }
+.appwords b { display: block; font-size: 15px; margin-bottom: 3px; }
+.appwords p { margin: 0; color: var(--label); font-size: 12.5px; line-height: 1.45; }
+.appwords p b { display: inline; color: #fff; font-size: inherit; margin: 0; }
+/* Pushed to the card's right edge, wrapping below the words when there is
+   not room — which the Turkish badge, half again as wide as the English
+   one, is what decides. Apple asks for clear space of a quarter of the
+   badge's height on every side; the card's 14px padding and 12px row gap
+   are what provide that 10px, so neither shrinks. */
+.appcta .store { flex: none; margin-left: auto; line-height: 0; }
+.appcta .store img { height: 40px; width: auto; display: block; }
+
+/* On a phone the button spans instead of sitting right: at that width a
+   right-aligned button leaves a gap wide enough to look like a mistake. */
+/* On a phone the badge centres instead of sitting right: at that width a
+   right-aligned badge leaves a gap wide enough to look like a mistake.
+   It is never stretched — the artwork has one aspect ratio. */
+@media (max-width: 480px) {
+  .appcta { padding: 14px; }
+  .appcta .store { flex: 1 0 100%; margin: 0; display: flex; justify-content: center; }
+}
+
+/* The planet is fixed to the bottom edge, so wherever the page is scrolled
+   the footer can end up over the continents. The same frosting the board uses
+   keeps it readable there instead of leaving it to luck. */
+footer {
+  margin-top: 36px; text-align: center; color: var(--label); font-size: 12px;
+  background: rgba(14,27,60,.5);
+  -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px);
+  border-radius: 14px; padding: 12px 14px;
+}
+footer p { margin: 4px 0; }
+footer a { color: var(--label); }
+
+/* Search: a panel over the board, not a new page — the grid stays in mind. */
+.panel { position: fixed; inset: 0; background: rgba(4,10,26,.72); display: flex;
+         justify-content: center; padding: 16px; z-index: 20;
+         backdrop-filter: blur(2px); }
+.sheet {
+  background: var(--card); border: 2px solid var(--stroke); border-radius: 18px;
+  width: 100%; max-width: 520px; height: fit-content; max-height: 90vh;
+  overflow: auto; padding: 14px;
+}
+.context { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.must { margin: 0; flex: 1; font-size: 13px; color: var(--label); }
+.must b { color: #fff; }
+.count { background: rgba(255,196,61,.15); color: var(--warm); border-radius: 999px;
+         padding: 3px 10px; font-size: 12px; font-weight: 800; }
+.x { background: none; border: 0; color: var(--label); font-size: 18px; cursor: pointer; }
+#q {
+  width: 100%; margin: 10px 0; padding: 12px 14px; font: inherit; font-size: 17px;
+  color: #fff; background: rgba(255,255,255,.06);
+  border: 2px solid var(--stroke); border-radius: 12px;
+}
+#q:focus { outline: none; border-color: var(--warm); }
+.hit {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  background: none; border: 0; border-top: 1px solid rgba(255,255,255,.07);
+  padding: 11px 4px; color: #fff; font: inherit; cursor: pointer;
+}
+.hit:hover { background: rgba(255,255,255,.05); }
+.hit .fl { width: 34px; height: 23px; object-fit: cover; border-radius: 3px;
+            border: 1px solid rgba(255,255,255,.25); flex: none; }
+.hitname { flex: 1; font-weight: 700; }
+.hitname em { display: block; font-style: normal; font-size: 12px;
+              color: var(--label); font-weight: 500; }
+.badge { background: var(--tier, var(--warm)); color: var(--tier-ink, #fff);
+         border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 900; }
+/* GridScoring.tierColor: green → yellow → orange → purple as a pick gets
+   rarer. SwiftUI's own system shades, so the chips read the same in both.
+   Carried as custom properties rather than a `background` of their own —
+   a bare `.t1` loses to `.cell .pts` on specificity and never paints. */
+.t1 { --tier: #34C759; }
+.t2 { --tier: #FFCC00; --tier-ink: var(--ink); }
+.t3 { --tier: #FF9500; }
+.t4 { --tier: #AF52DE; }
+.err { color: var(--danger); font-size: 14px; padding: 10px 4px; margin: 0; }
+.tip { color: var(--label); font-size: 12px; margin: 10px 0 0; text-align: center; }
+
+@media (max-width: 420px) {
+  .cols, .grid { grid-template-columns: 62px repeat(3, 1fr); gap: 5px; }
+  .head { font-size: 10px; }
+  .cell .fl { width: 34px; height: 23px; }
+  .cell .nm { font-size: 10px; }
+}
+
+/* ------------------------------------------------------- how to play
+   GenericHowToPlayView on a page: the same icon tile, card and spacing,
+   tinted with GeoSquare's own accent. The sheet reuses .panel/.sheet so
+   it dismisses exactly like the search overlay. */
+.pill.help {
+  cursor: pointer; padding: 7px 15px; color: var(--label);
+  font-size: 16px; font-weight: 900; line-height: 1;
+}
+.pill.help:hover { border-color: var(--warm); color: #fff; }
+
+.sheet.htp { --accent: #4DA3FF; }   /* AppColor.Game.geoSquare */
+.htphead { position: relative; text-align: center; padding: 6px 30px 14px; }
+.htphead h2 { margin: 0; font-size: 24px; font-weight: 800; }
+.htphead p { margin: 5px 0 0; color: var(--label); font-size: 14px; }
+.htphead .x { position: absolute; top: 0; right: 0; }
+
+.rule {
+  display: flex; align-items: flex-start; gap: 12px; padding: 14px;
+  background: rgba(255,255,255,.05); border-radius: 12px; margin-bottom: 10px;
+}
+.ricon {
+  flex: none; width: 36px; height: 36px; border-radius: 10px;
+  display: grid; place-items: center;
+  color: var(--accent); background: rgba(77,163,255,.15);
+}
+.ricon svg { width: 19px; height: 19px; }
+.rule h3 { margin: 0 0 3px; font-size: 14px; font-weight: 700; }
+.rule p  { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--label); }
+
+.htpok {
+  width: 100%; margin-top: 4px; background: var(--accent);
+  border-color: #2E7FD4; color: #fff;
+}
+
+/* ------------------------------------------------------ language picker
+   The app's splash chip: the language's flag, its short code, and a menu
+   that names each language in itself. */
+.langwrap { position: relative; }
+.pill.lang { cursor: pointer; gap: 6px; padding: 6px 12px; font-size: 13px; }
+.pill.lang img { width: 20px; height: 14px; object-fit: cover; border-radius: 2px;
+                 border: 1px solid rgba(21,39,90,.35); }
+.pill.lang:hover { border-color: var(--warm); }
+
+.langmenu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
+  background: var(--card); border: 2px solid var(--stroke); border-radius: 14px;
+  padding: 6px; min-width: 164px; box-shadow: 0 10px 24px rgba(0,0,0,.45);
+}
+.langmenu button {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  background: none; border: 0; border-radius: 9px; padding: 8px 10px;
+  color: #fff; font: inherit; font-size: 14px; font-weight: 600;
+  text-align: left; cursor: pointer;
+}
+.langmenu button:hover { background: rgba(255,255,255,.08); }
+.langmenu button[aria-current="true"] { color: var(--warm); }
+.langmenu img { width: 22px; height: 15px; object-fit: cover; border-radius: 2px;
+                border: 1px solid rgba(21,39,90,.35); flex: none; }
+
+/* The search sheet's "must be" line carries its own <b> from the catalog. */
+.must b { color: #fff; }
+
+/* Five pills do not fit across a phone: the language chip wrapped to a row
+   of its own, centred under the rest, and pushed the board down. The whole
+   row shrinks a step rather than one pill being singled out, and the flag
+   carries the chip alone — the button keeps its label for screen readers. */
+@media (max-width: 420px) {
+  .pills { gap: 6px; }
+  .pill { padding: 6px 10px; font-size: 13.5px; }
+  .pill.compass { padding: 5px 9px; }
+  .pill.compass img { width: 22px; height: 22px; }
+  .pill.help { padding: 5px 11px; font-size: 15px; }
+  .pill.lang { padding: 5px 9px; }
+  .pill.lang img { width: 19px; height: 13px; }
+  #langcode { display: none; }
+}

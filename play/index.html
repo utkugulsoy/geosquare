@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GeoSquare — Daily Geography Grid</title>
+<meta name="description" content="A new 3×3 geography grid every day. Fill each square with a country that fits both its row and its column.">
+<link rel="stylesheet" href="style.css">
+<link rel="preload" as="image" href="art/theme_logo.png">
+</head>
+<body>
+<!-- Defined once: every armed square's needle masks against this. Repeating
+     the <defs> in nine inline SVGs would mean nine clashing ids. -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <mask id="compass-needle">
+    <rect width="100" height="100" fill="#fff"/>
+    <path d="M71 29 L55.5 55.5 L44.5 44.5 Z" fill="#000"/>
+    <path d="M29 71 L44.5 44.5 L55.5 55.5 Z" fill="#000"/>
+  </mask>
+</svg>
+<!-- The app's own backdrop: star field over the sky gradient, and the drawn
+     planet along the bottom edge. Both are canvases so they scale with the
+     window the way the app's ThemeBackground scales with the screen. -->
+<canvas id="sky" class="sky" aria-hidden="true"></canvas>
+<img class="cloud big" src="art/deco_cloud_big.png" alt="" aria-hidden="true">
+<img class="cloud small" src="art/deco_cloud_small.png" alt="" aria-hidden="true">
+<canvas id="globe" class="globe" aria-hidden="true"></canvas>
+
+<main>
+  <header>
+    <img class="wordmark" src="art/theme_logo.png" alt="GeoSquare">
+    <p class="sub" id="date"></p>
+    <div class="pills">
+      <span class="pill"><b id="score">0/9</b><i></i><b class="warm" id="points">0/0</b></span>
+      <span class="pill" id="lives"></span>
+      <button class="pill compass" id="compass" data-t-aria="a11y_compass"><img src="art/badge_compass.png" alt=""></button>
+      <button class="pill help" id="help" data-t-aria="a11y_help">?</button>
+      <div class="langwrap">
+        <button class="pill lang" id="lang" data-t-aria="a11y_lang">
+          <img id="langflag" src="flags/gb.png" alt=""><span id="langcode">EN</span>
+        </button>
+        <!-- Each language named in itself: someone who needs the menu cannot
+             read the language they are currently stuck in. -->
+        <div class="langmenu" id="langmenu" hidden>
+          <button data-lang="en"><img src="flags/gb.png" alt=""><span>English</span></button>
+          <button data-lang="tr"><img src="flags/tr.png" alt=""><span>Türkçe</span></button>
+          <button data-lang="es"><img src="flags/es.png" alt=""><span>Español</span></button>
+          <button data-lang="pt"><img src="flags/br.png" alt=""><span>Português</span></button>
+          <button data-lang="fr"><img src="flags/fr.png" alt=""><span>Français</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="board">
+    <div class="cols" id="cols"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="result" id="result" hidden>
+    <h2 id="verdict"></h2>
+    <p id="final"></p>
+    <pre id="emoji"></pre>
+    <button id="share" class="cta" data-t="share"></button>
+  </section>
+
+  <!-- The page's only pitch, and it stays put: a visitor who never finishes
+       the grid should still find out the app exists and what it gives them.
+       Below the board, so it is read after the game rather than instead. -->
+  <aside class="appcta">
+    <img class="appicon" src="art/appicon.png" alt="" width="58" height="58">
+    <div class="appwords">
+      <b data-t="cta_title"></b>
+      <p data-t-html="cta_sub"></p>
+    </div>
+    <!-- Apple's own badge, one SVG per language (see art/appstore/README.md).
+         Sized by height only: the Turkish one is half again as wide. -->
+    <a class="store" href="https://apps.apple.com/app/id6812675483">
+      <img id="storebadge" src="art/appstore/en.svg" alt="" height="40">
+    </a>
+  </aside>
+
+  <footer>
+    <p data-t="footer_note"></p>
+    <p><a href="../" data-t="support"></a> · <a href="../privacy.html" data-t="privacy"></a></p>
+  </footer>
+</main>
+
+<div class="panel" id="panel" hidden>
+  <div class="sheet">
+    <div class="context">
+      <p class="must" id="must"></p>
+      <span class="count" id="count"></span>
+      <button class="x" id="close" data-t-aria="a11y_close">✕</button>
+    </div>
+    <input id="q" type="text" data-t-ph="search_placeholder" autocomplete="off"
+           autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="hits" id="hits"></div>
+    <p class="tip" data-t="search_tip"></p>
+  </div>
+</div>
+
+<!-- HowToPlayView's seven rules, in its order and its words. Lives sit third
+     because that rule changes how a player approaches every other one, and
+     the compass follows it directly: one sets the stakes, the other is the
+     way out of them. -->
+<div class="panel" id="htp" hidden>
+  <div class="sheet htp">
+    <div class="htphead">
+      <h2 data-t="htp_title"></h2>
+      <p data-t="htp_subtitle"></p>
+      <button class="x" id="htpclose" data-t-aria="a11y_close">✕</button>
+    </div>
+
+    <div class="rule">
+      <span class="ricon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <rect x="3" y="3" width="5" height="5" rx="1.3"/><rect x="9.5" y="3" width="5" height="5" rx="1.3"/><rect x="16" y="3" width="5" height="5" rx="1.3"/>
+        <rect x="3" y="9.5" width="5" height="5" rx="1.3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.3"/><rect x="16" y="9.5" width="5" height="5" rx="1.3"/>
+        <rect x="3" y="16" width="5" height="5" rx="1.3"/><rect x="9.5" y="16" width="5" height="5" rx="1.3"/><rect x="16" y="16" width="5" height="5" rx="1.3"/>
+      </svg></span>
+      <div><h3 data-t="htp_r1_t"></h3>
+        <p data-t="htp_r1_b"></p></div>
+    </div>
+
+    <div class="rule">
+      <span class="ricon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><ellipse cx="12" cy="12" rx="4.2" ry="9"/>
+      </svg></span>
+      <div><h3 data-t="htp_r2_t"></h3>
+        <p data-t="htp_r2_b"></p></div>
+    </div>
+
+    <div class="rule">
+      <span class="ricon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 20.7l-1.4-1.3C5.4 14.7 2 11.6 2 7.9 2 5 4.2 2.8 7 2.8c1.6 0 3.1.7 4 1.9.9-1.2 2.4-1.9 4-1.9 2.8 0 5 2.2 5 5.1 0 3.7-3.4 6.8-8.6 11.5l-1.4 1.3z"/>
+      </svg></span>
+      <div><h3 data-t="htp_r3_t"></h3>
+        <p data-t="htp_r3_b"></p></div>
+    </div>
+
+    <div class="rule">
+      <span class="ricon"><svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="47" fill="currentColor" mask="url(#compass-needle)"/>
+      </svg></span>
+      <div><h3 data-t="htp_r4_t"></h3>
+        <p data-t="htp_r4_b"></p></div>
+    </div>
+
+    <div class="rule">
+      <span class="ricon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4.5 9.5A8 8 0 0 1 18 6.2"/><path d="M18.5 2.6v3.9h-3.9"/>
+        <path d="M19.5 14.5A8 8 0 0 1 6 17.8"/><path d="M5.5 21.4v-3.9h3.9"/>
+      </svg></span>
+      <div><h3 data-t="htp_r5_t"></h3>
+        <p data-t="htp_r5_b"></p></div>
+    </div>
+
+    <div class="rule">
+      <span class="ricon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/>
+      </svg></span>
+      <div><h3 data-t="htp_r6_t"></h3>
+        <p data-t="htp_r6_b"></p></div>
+    </div>
+
+    <div class="rule">
+      <span class="ricon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                               stroke-linejoin="round" aria-hidden="true">
+        <path d="M5.2 3.4h11a1.8 1.8 0 0 1 1.8 1.8V21H7a1.8 1.8 0 0 1-1.8-1.8V3.4z"/>
+        <path d="M5.2 17.6H18"/><path d="M9.1 13.2l2.4-5.6 2.4 5.6M10 11.4h3"/>
+      </svg></span>
+      <div><h3 data-t="htp_r7_t"></h3>
+        <p data-t="htp_r7_b"></p></div>
+    </div>
+
+    <button class="cta htpok" id="htpok" data-t="got_it"></button>
+  </div>
+</div>
+
+<script src="strings.js"></script>
+<script src="backdrop.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
