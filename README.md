@@ -10,6 +10,18 @@ The two App Store pages share the root `style.css`, which is the app's own
 palette lifted out of the original single-file policy page. `play/` is
 self-contained and shares nothing with them.
 
+## This repo is a published site, not an open-source project
+
+It is public because GitHub Pages on a free plan serves nothing else, and
+because a browser downloads `play/`'s JavaScript to run it anyway — there
+is no version of this that hides it. That is not the same as an invitation:
+no licence is granted, nobody is being asked for pull requests, and the
+app's actual source (the Swift, the generator, CapCha and GeoSpy) lives in
+a separate private repo and is not here.
+
+Issues are open, and they are the public support channel the App Store
+listing points at. Please use them for that.
+
 ## play/
 
 A build, not a source tree. It is generated in the app repo under `web/`
